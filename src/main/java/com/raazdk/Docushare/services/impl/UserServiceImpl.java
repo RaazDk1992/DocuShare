@@ -40,7 +40,12 @@ public class UserServiceImpl implements UserService {
     }
 
 
-
+    @Override
+    public UserDTO getUserById(Long id) {
+//        return userRepository.findById(id).orElseThrow();
+        DocushareUser user = userRepository.findById(id).orElseThrow();
+        return convertToDto(user);
+    }
 
     private UserDTO convertToDto(DocushareUser user) {
         return new UserDTO(
