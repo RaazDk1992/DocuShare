@@ -2,7 +2,7 @@ package com.raazdk.Docushare.controller;
 
 import com.raazdk.Docushare.dto.UserDTO;
 import com.raazdk.Docushare.models.DocushareUser;
-import com.raazdk.Docushare.security.requests.LoginRequest;
+import com.raazdk.Docushare.security.jwt.request.LoginRequest;
 import com.raazdk.Docushare.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/user")
 public class UserController {
     @Autowired
     UserService userService;
-    @PostMapping("/login")
+    @GetMapping("/getuser")
     public ResponseEntity<List<DocushareUser>> Login(@RequestBody LoginRequest request){
 
 

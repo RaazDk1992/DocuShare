@@ -5,6 +5,9 @@ import com.raazdk.Docushare.models.DocushareUser;
 import com.raazdk.Docushare.models.Role;
 import com.raazdk.Docushare.repository.RoleRepository;
 import com.raazdk.Docushare.repository.UserRepository;
+import com.raazdk.Docushare.security.jwt.AuthEntryPoint;
+import com.raazdk.Docushare.security.jwt.TokenFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.context.annotation.Bean;
@@ -16,7 +19,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import java.time.LocalDate;
@@ -27,18 +33,43 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true,securedEnabled = true,jsr250Enabled = true)
 public class SecurityConfig {
+    @Autowired
+    AuthEntryPoint authEntryPoint;
+
+    @Bean
+    TokenFilter tokenFilter(){
+        return new TokenFilter();
+    }
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf-> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()));
+        http.csrf(csrf-> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/auth/**"));
         http.authorizeHttpRequests((requests) -> requests
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/csrf/getcsrf").permitAll()
-                .requestMatchers("/api/auth/getuser/{id}").hasRole("ADMIN")
+                .requestMatchers("/api/user/getuser/").hasRole("ADMIN")
                 .anyRequest().authenticated());
-                http.csrf(AbstractHttpConfigurer::disable);
+        http.exceptionHandling(exception->exception.authenticationEntryPoint(authEntryPoint));
+        http.addFilterBefore(tokenFilter(), UsernamePasswordAuthenticationFilter.class);
+
         //http.formLogin(withDefaults());
         http.httpBasic(withDefaults());
         return http.build();
+    }
+
+
+
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception{
+
+        return configuration.getAuthenticationManager();
+
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
 
@@ -55,7 +86,7 @@ public class SecurityConfig {
 
             if (!userRepository.existsByUserName("user1")) {
                 DocushareUser user1 = new DocushareUser("user1", "user1@mail.com",
-                        "{noop}password");
+                        passwordEncoder().encode("password"));
                 user1.setAccountNonLocked(true);
                 user1.setAccountNonExpired(true);
                 user1.setCredentialsNonExpired(true);
@@ -68,7 +99,7 @@ public class SecurityConfig {
 
             if (!userRepository.existsByUserName("admin")) {
                 DocushareUser admin = new DocushareUser("admin", "admin@mail.com",
-                        "{noop}password");
+                        passwordEncoder().encode("password"));
                 admin.setAccountNonLocked(true);
                 admin.setAccountNonExpired(true);
                 admin.setCredentialsNonExpired(true);
